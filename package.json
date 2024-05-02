@@ -23,7 +23,8 @@
   },
   "main": "lib/index.js",
   "scripts": {
-    "lint": "eslint lib",
+    "lint": "eslint lib example.js",
+    "prettier": "npx prettier --write \"**/*.{ts,tsx,js,md,mdx,css,yaml}\"",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "docs": "node scripts/docs.js"

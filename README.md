@@ -10,6 +10,7 @@ Node.JS implemenation of Encrypted Smiley ® Secure Protocol (eSSP, SSP)
 **Supported devices:** NV9USB, NV10USB, BV20, BV50, BV100, NV200, NV200 Spectral, SMART Hopper, SMART Payout, NV11, NV22
 
 > [!WARNING]
+>
 > **NV11** is not fully tested and supported. Maintainer is required.
 
 ## Table of Contents

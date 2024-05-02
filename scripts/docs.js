@@ -56,6 +56,7 @@ sortedCommands.forEach(([name, rest]) => {
 
   if (encrypted) {
     addLineToFile('> [!IMPORTANT]')
+    addLineToFile('>')
     addLineToFile('> **Requires encryption**')
     addLineToFile('')
   }
