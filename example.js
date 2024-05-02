@@ -49,7 +49,7 @@ eSSP.on('NOTE_REJECTED', result => {
 })
 
 eSSP
-  .open('COM9', serialPortConfig)
+  .open('COM3', serialPortConfig)
   .then(() => eSSP.command('SYNC'))
   .then(() => eSSP.command('HOST_PROTOCOL_VERSION', { version: 6 }))
   .then(() => eSSP.initEncryption())

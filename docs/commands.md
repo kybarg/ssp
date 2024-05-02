@@ -1,5 +1,5 @@
 <a name="readme-top"></a>
-[Back to Readme](../README.md)
+[Back to Documentation](readme.md)
 # Commands
 1. [Reset](#RESET)
 2. [Set Channel Inhibits](#SET_CHANNEL_INHIBITS)

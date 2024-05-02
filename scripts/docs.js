@@ -35,7 +35,7 @@ function convertToTitleCase(str) {
 makeFileEmpty()
 
 addLineToFile('<a name="readme-top"></a>')
-addLineToFile('[Back to Readme](../README.md)')
+addLineToFile('[Back to Documentation](readme.md)')
 addLineToFile('# Commands')
 
 const sortedCommands = Object.entries(commands).sort(([, a], [, b]) => a.code - b.code)
@@ -102,7 +102,7 @@ filePath = 'docs/events.md'
 makeFileEmpty()
 
 addLineToFile('<a name="readme-top"></a>')
-addLineToFile('[Back to Readme](../README.md)')
+addLineToFile('[Back to Documentation](readme.md)')
 addLineToFile('# Events')
 
 const sortedStatuses = Object.entries(statuses).sort(([a], [b]) => a - b)

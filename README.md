@@ -1,5 +1,8 @@
 <a name="readme-top"></a>
 
+[![NPM Version](https://img.shields.io/npm/v/%40kybarg%2Fssp)](https://npmjs.com/@kybarg/ssp) [![Codecov](https://img.shields.io/codecov/c/github/kybarg/ssp)](https://codecov.io/gh/kybarg/ssp) [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/kybarg/ssp/.github%2Fworkflows%2Ftest.yml)
+](https://github.com/kybarg/ssp/actions/workflows/node.js.yml) [![GitHub License](https://img.shields.io/github/license/kybarg/ssp)](https://github.com/kybarg/ssp/blob/main/LICENSE)
+
 # @kybarg/ssp
 
 Node.JS implemenation of Encrypted Smiley ® Secure Protocol (eSSP, SSP)
@@ -13,8 +16,7 @@ Node.JS implemenation of Encrypted Smiley ® Secure Protocol (eSSP, SSP)
 
 1. [Basis usage](#basis-usage)
 2. [Methods](#methods)
-3. [Commands](docs/commands.md)
-4. [Events](docs/events.md)
+3. [Documentation](docs/readme.md)
 
 ## Basis usage
 
