@@ -1,0 +1,28 @@
+name: Test
+
+on:
+  push:
+    branches: ['main', 'dev', 'next']
+  pull_request:
+    branches: ['main', 'dev', 'next']
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    environment: main
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
