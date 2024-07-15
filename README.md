@@ -38,6 +38,21 @@ eSSP.command('GET_SERIAL_NUMBER').then(result => {
   console.log('Serial number:', result.info.serial_number)
   return
 })
+
+const portOptions = { baudRate: 9600 }
+
+eSSP.open('COM1', portOptions)
+```
+
+## Config values
+```javascript
+const options = {
+    fixedKey: '123', // device internal encryption key
+    encryptAllCommand: true, // should command commands also be encrypted
+    id: 0, // device id in case multiple acceptors connected to the host
+    timeout: 1000, // command response timeout after wich command considered failed
+    commandRetries: 20 // how many time to retry before throwing error or emitting ERROR event
+  }
 ```
 
 ## Methods
