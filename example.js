@@ -76,6 +76,7 @@ eSSP
       channels: Array(channels.length).fill(1),
     }),
   )
+  // .then(() =>  eSSP.command('ENABLE'))
   .then(() => eSSP.enable())
   .then(() => {
     console.log('GO!!!')

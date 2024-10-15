@@ -53,6 +53,7 @@ const options = {
   id: 0, // device id in case multiple acceptors connected to the host
   timeout: 1000, // command response timeout after wich command considered failed
   commandRetries: 20, // how many time to retry before throwing error or emitting ERROR event
+  pollingInterval: 300, // interval between poll messages
 }
 ```
 
