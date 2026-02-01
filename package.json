@@ -21,13 +21,16 @@
   "bugs": {
     "url": "https://github.com/kybarg/ssp/issues"
   },
-  "main": "lib/index.js",
+  "main": "dist/lib/index.js",
+  "types": "dist/lib/index.d.ts",
   "scripts": {
-    "lint": "eslint lib example.js",
+    "build": "tsc",
+    "lint": "eslint lib example.ts",
     "prettier": "npx prettier --write \"**/*.{ts,tsx,js,md,mdx,css,yaml}\"",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
-    "docs": "node scripts/docs.js"
+    "docs": "tsx scripts/docs.ts",
+    "example": "tsx example.ts"
   },
   "dependencies": {
     "chalk": "^4.1.2",
@@ -36,17 +39,20 @@
     "serialport": "^13.0.0"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "^7.26.10",
-    "@babel/plugin-syntax-import-assertions": "^7.26.0",
-    "@eslint/eslintrc": "^3.3.0",
     "@eslint/js": "^9.22.0",
-    "esbuild-register": "^3.6.0",
+    "@types/debug": "^4.1.12",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.0.0",
+    "@types/semver": "^7.7.1",
     "eslint": "^9.22.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-jest": "^28.11.0",
-    "eslint-plugin-node": "^11.1.0",
     "globals": "^16.0.0",
-    "jest": "^29.7.0"
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.24.0"
   },
   "keywords": [
     "bv100",
@@ -73,5 +79,9 @@
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node"
   }
 }

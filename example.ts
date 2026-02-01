@@ -1,27 +1,25 @@
-const SSP = require('./lib/index.js')
-const channels = [{ value: 0, country_code: 'XXX' }]
+import SSP from './lib/index'
+
+interface Channel {
+  value: number
+  country_code: string
+}
+
+const channels: Channel[] = [{ value: 0, country_code: 'XXX' }]
 
 const serialPortConfig = {
-  baudRate: 9600, // default: 9600
-  dataBits: 8, // default: 8
-  stopBits: 2, // default: 2
-  parity: 'none', // default: 'none'
+  baudRate: 9600,
+  dataBits: 8 as const,
+  stopBits: 2 as const,
+  parity: 'none' as const,
 }
 
 const eSSP = new SSP({
   id: 0x00,
-  timeout: 1000, // default: 3000
-  encryptAllCommand: true, // default: true
-  fixedKey: '0123456701234567', // default: '0123456701234567'
+  timeout: 1000,
+  encryptAllCommand: true,
+  fixedKey: '0123456701234567',
 })
-
-// eSSP.on('DATA_RECEIVED', data => {
-//   console.log(data)
-// })
-
-// eSSP.on('DEBUG', data => {
-//   console.log(data)
-// })
 
 eSSP.on('OPEN', () => {
   console.log('Port opened!')
@@ -31,7 +29,7 @@ eSSP.on('CLOSE', () => {
   console.log('Port closed!')
 })
 
-eSSP.on('READ_NOTE', result => {
+eSSP.on('READ_NOTE', (result: { channel: number }) => {
   console.log('READ_NOTE', result)
   console.log(channels[result.channel])
 
@@ -40,7 +38,7 @@ eSSP.on('READ_NOTE', result => {
   }
 })
 
-eSSP.on('NOTE_REJECTED', result => {
+eSSP.on('NOTE_REJECTED', (result: unknown) => {
   console.log('NOTE_REJECTED', result)
 
   eSSP.command('LAST_REJECT_CODE').then(result => {
@@ -62,10 +60,12 @@ eSSP
   .then(() => eSSP.command('UNIT_DATA'))
   .then(() => eSSP.command('SETUP_REQUEST'))
   .then(result => {
-    for (let i = 0; i < result.info.channel_value.length; i++) {
+    const expandedValues = result.info.expanded_channel_value as number[]
+    const expandedCodes = result.info.expanded_channel_country_code as string[]
+    for (let i = 0; i < expandedValues.length; i++) {
       channels[i + 1] = {
-        value: result.info.expanded_channel_value[i],
-        country_code: result.info.expanded_channel_country_code[i],
+        value: expandedValues[i],
+        country_code: expandedCodes[i],
       }
     }
     console.log('channels', channels)
@@ -76,7 +76,6 @@ eSSP
       channels: Array(channels.length).fill(1),
     }),
   )
-  // .then(() =>  eSSP.command('ENABLE'))
   .then(() => eSSP.enable())
   .then(() => {
     console.log('GO!!!')

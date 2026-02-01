@@ -1,9 +1,12 @@
-const { once, EventEmitter } = require('node:events')
-const { promisify } = require('node:util')
-const { SerialPort } = require('serialport')
-const chalk = require('chalk')
-const debug = require('debug')('ssp')
-const {
+import { once, EventEmitter } from 'node:events'
+import { promisify } from 'node:util'
+import { SerialPort } from 'serialport'
+import chalk from 'chalk'
+import debug from 'debug'
+
+const log = debug('ssp')
+
+import {
   argsToByte,
   CRC16,
   extractPacketData,
@@ -12,11 +15,22 @@ const {
   parseData,
   createSSPHostEncryptionKey,
   validateNodeVersion,
-} = require('./utils.js')
-const commandList = require('./static/commands.json')
-const { SSPParser } = require('./parser/index.js')
+  SSPKeys,
+  ParsedResult,
+} from './utils'
+import commandList from './static/commands.json'
+import { SSPParser } from './parser/index'
 
-const PORT_OPTIONS = {
+interface PortOptions {
+  baudRate?: number
+  dataBits?: 5 | 6 | 7 | 8
+  stopBits?: 1 | 1.5 | 2
+  parity?: 'none' | 'even' | 'odd' | 'mark' | 'space'
+  highWaterMark?: number
+  [key: string]: unknown
+}
+
+const PORT_OPTIONS: PortOptions = {
   baudRate: 9600,
   dataBits: 8,
   stopBits: 2,
@@ -24,16 +38,51 @@ const PORT_OPTIONS = {
   highWaterMark: 64 * 1024,
 }
 
+interface SSPConfig {
+  encryptAllCommand?: boolean
+  id?: number
+  timeout?: number
+  commandRetries?: number
+  pollingInterval?: number
+  [key: string]: unknown
+}
+
+interface DebugData {
+  command: string
+  tx: {
+    createdAt: number
+    encrypted: Buffer
+    plain: Buffer
+  }
+  rx: {
+    createdAt: number | null
+    encrypted: Buffer | null
+    plain: Buffer | null
+  }
+}
+
 class SSP extends EventEmitter {
-  constructor(config) {
+  config: Required<Pick<SSPConfig, 'encryptAllCommand' | 'id' | 'timeout' | 'commandRetries' | 'pollingInterval'>>
+  keys: SSPKeys
+  state: { enabled: boolean; polling: boolean; processing: boolean }
+  eCount: number
+  commandSendAttempts: number
+  sequence: number
+  protocol_version: number | null
+  unit_type: string | null
+
+  private port!: SerialPort
+  private parser!: SSPParser
+  private eventEmitter: EventEmitter
+  private pollTimeout?: ReturnType<typeof setTimeout>
+
+  constructor(config: SSPConfig) {
     super()
     validateNodeVersion()
 
-    // Initialize event emitter
     this.eventEmitter = new EventEmitter()
 
-    // Initialize config
-    const { fixedKey = '0123456701234567', ...otherConfig } = config
+    const { fixedKey = '0123456701234567', ...otherConfig } = config as SSPConfig & { fixedKey?: string }
     this.config = {
       encryptAllCommand: true,
       id: 0,
@@ -43,7 +92,6 @@ class SSP extends EventEmitter {
       ...otherConfig,
     }
 
-    // Initialize keys
     this.keys = {
       encryptKey: null,
       fixedKey,
@@ -55,7 +103,6 @@ class SSP extends EventEmitter {
       slaveInterKey: null,
     }
 
-    // Initialize state
     this.state = {
       enabled: false,
       polling: false,
@@ -70,10 +117,10 @@ class SSP extends EventEmitter {
     this.unit_type = null
   }
 
-  async open(port, options = {}) {
+  async open(port: string, options: PortOptions = {}): Promise<void> {
     const serialOptions = { ...PORT_OPTIONS, ...options }
 
-    this.port = new SerialPort({ path: port, autoOpen: false, ...serialOptions })
+    this.port = new SerialPort({ path: port, autoOpen: false, ...serialOptions } as ConstructorParameters<typeof SerialPort>[0])
 
     this.port.on('open', () => {
       this.emit('OPEN')
@@ -83,51 +130,43 @@ class SSP extends EventEmitter {
       this.emit('CLOSE')
     })
 
-    this.port.on('error', error => {
+    this.port.on('error', (error: Error) => {
       this.emit('ERROR', error)
       this.eventEmitter.emit('error', error)
     })
 
     this.parser = this.port.pipe(new SSPParser())
-    this.parser.on('data', buffer => {
+    this.parser.on('data', (buffer: Buffer) => {
       this.eventEmitter.emit('DATA', buffer)
     })
 
     return promisify(this.port.open.bind(this.port))()
   }
 
-  async close() {
+  async close(): Promise<void> {
     if (this.port !== undefined) {
       return promisify(this.port.close.bind(this.port))()
     }
     return
   }
 
-  getSequence() {
+  getSequence(): number {
     return this.config.id | this.sequence
   }
 
-  /**
-   * Exchange encryption keys.
-   *
-   * @returns {Promise<Object>} result - The result of the key exchange.
-   */
-  async initEncryption() {
+  async initEncryption(): Promise<ParsedResult> {
     const newKeys = generateKeys()
 
-    // Reset counter and keys
     Object.assign(this.keys, newKeys, { encryptKey: null })
     this.eCount = 0
 
-    // Define key exchange commands
     const commands = [
-      { command: 'SET_GENERATOR', args: { key: this.keys.generator } },
-      { command: 'SET_MODULUS', args: { key: this.keys.modulus } },
-      { command: 'REQUEST_KEY_EXCHANGE', args: { key: this.keys.hostInter } },
+      { command: 'SET_GENERATOR', args: { key: this.keys.generator! } },
+      { command: 'SET_MODULUS', args: { key: this.keys.modulus! } },
+      { command: 'REQUEST_KEY_EXCHANGE', args: { key: this.keys.hostInter! } },
     ]
 
-    // Execute key exchange commands sequentially
-    let result
+    let result!: ParsedResult
     for (const { command, args } of commands) {
       result = await this.command(command, args)
       if (!result || !result.success) {
@@ -138,44 +177,39 @@ class SSP extends EventEmitter {
     return result
   }
 
-  parsePacketData(buffer, command) {
+  parsePacketData(buffer: Buffer, command: string): ParsedResult {
     const parsedData = parseData(buffer, command, this.protocol_version, this.unit_type)
 
-    debug(parsedData)
+    log(parsedData)
 
     if (parsedData.success) {
       if (command === 'REQUEST_KEY_EXCHANGE') {
         try {
-          const keys = createSSPHostEncryptionKey(Buffer.from(parsedData.info.key), this.keys)
+          const keys = createSSPHostEncryptionKey(Buffer.from(parsedData.info.key as number[]), this.keys)
           this.keys = { ...this.keys, ...keys }
 
-          debug('AES encrypt key:', chalk.red(`0x${Buffer.from(this.keys.encryptKey).toString('hex')}`))
-          debug(this.keys)
+          log('AES encrypt key:', chalk.red(`0x${Buffer.from(this.keys.encryptKey!).toString('hex')}`))
+          log(this.keys)
         } catch (error) {
-          debug(error)
+          log(error)
           throw new Error('Key exchange error')
         }
       } else if (command === 'SETUP_REQUEST') {
-        this.protocol_version = parsedData.info.protocol_version
-        this.unit_type = parsedData.info.unit_type
+        this.protocol_version = parsedData.info.protocol_version as number
+        this.unit_type = parsedData.info.unit_type as string
       } else if (command === 'UNIT_DATA') {
-        this.unit_type = parsedData.info.unit_type
+        this.unit_type = parsedData.info.unit_type as string
       }
     } else {
       if (command === 'HOST_PROTOCOL_VERSION') {
-        this.protocol_version = undefined
+        this.protocol_version = undefined as unknown as null
       }
     }
 
     return parsedData
   }
 
-  /**
-   * Enable for acepting cash.
-   *
-   * @returns {Promise<Object>} result - The result of the enable command.
-   */
-  async enable() {
+  async enable(): Promise<ParsedResult> {
     const result = await this.command('ENABLE')
 
     if (result.status === 'OK') {
@@ -186,12 +220,7 @@ class SSP extends EventEmitter {
     return result
   }
 
-  /**
-   * Disable for acepting cash.
-   *
-   * @returns {Promise<Object>} result - The result of the disable command.
-   */
-  async disable() {
+  async disable(): Promise<ParsedResult> {
     if (this.state.polling) await this.poll(false)
 
     const result = await this.command('DISABLE')
@@ -203,13 +232,14 @@ class SSP extends EventEmitter {
     return result
   }
 
-  async command(command, args) {
+  async command(command: string, args?: Record<string, unknown>): Promise<ParsedResult> {
     command = command.toUpperCase()
-    if (commandList[command] === undefined) {
+    const cmd = (commandList as Record<string, { encrypted: boolean }>)[command]
+    if (cmd === undefined) {
       throw new Error('Unknown command')
     }
 
-    if (commandList[command].encrypted && this.keys.encryptKey === null) {
+    if (cmd.encrypted && this.keys.encryptKey === null) {
       throw new Error('Command requires ecnryption')
     }
 
@@ -223,17 +253,16 @@ class SSP extends EventEmitter {
 
     this.commandSendAttempts = 0
 
-    const isEncrypted = this.keys.encryptKey !== null && (commandList[command].encrypted || this.config.encryptAllCommand)
-    const argBytes = argsToByte(command, args, this.protocol_version)
+    const isEncrypted = this.keys.encryptKey !== null && (cmd.encrypted || this.config.encryptAllCommand)
+    const argBytes = argsToByte(command, args as Parameters<typeof argsToByte>[1], this.protocol_version)
     const sequence = this.getSequence()
-    const encryptionKey = isEncrypted ? this.keys.encryptKey : null
+    const encryptionKey = isEncrypted ? this.keys.encryptKey! : null
 
     const buffer = getPacket(command, argBytes, sequence, encryptionKey, this.eCount)
     const bufferPlain = isEncrypted ? getPacket(command, argBytes, sequence, null, this.eCount) : buffer
 
     const result = await this.sendToDevice(command, buffer, bufferPlain)
 
-    // update sequence after response received
     this.sequence = this.sequence === 0x00 ? 0x80 : 0x00
 
     if (!result.success) {
@@ -243,12 +272,11 @@ class SSP extends EventEmitter {
     return result
   }
 
-  async sendToDevice(command, txBuffer, txBufferPlain) {
+  private async sendToDevice(command: string, txBuffer: Buffer, txBufferPlain: Buffer): Promise<ParsedResult> {
     for (let i = 0; i < this.config.commandRetries; i++) {
-      // Set processing state
       this.state.processing = true
-      debug('COM <-', chalk.cyan(txBuffer.toString('hex')), chalk.green(command), this.eCount, Date.now())
-      const debugData = {
+      log('COM <-', chalk.cyan(txBuffer.toString('hex')), chalk.green(command), this.eCount, Date.now())
+      const debugData: DebugData = {
         command,
         tx: {
           createdAt: Date.now(),
@@ -262,44 +290,35 @@ class SSP extends EventEmitter {
         },
       }
 
-      // Define command timeout
       const commandTimeout = setTimeout(() => {
         this.eventEmitter.emit('error', new Error('TIMEOUT'))
       }, this.config.timeout)
 
       try {
-        // Send command to device
         this.port.write(txBuffer)
         this.commandSendAttempts += 1
 
-        // Await data from device
         const [rxBuffer] = await once(this.eventEmitter, 'DATA')
         clearTimeout(commandTimeout)
         debugData.rx.createdAt = Date.now()
         debugData.rx.encrypted = rxBuffer
 
-        debug('COM ->', chalk.yellow(rxBuffer.toString('hex')), chalk.green(command), this.eCount, Date.now())
+        log('COM ->', chalk.yellow(rxBuffer.toString('hex')), chalk.green(command), this.eCount, Date.now())
 
-        // Extract packet data bytes omiting packing data
         const DATA = extractPacketData(rxBuffer, this.keys.encryptKey, this.eCount)
         debugData.rx.plain = Buffer.from([...rxBuffer.slice(0, 2), DATA.length, ...DATA, ...CRC16([rxBuffer[1], DATA.length, ...DATA])])
 
-        // Check if sequence flag mismatch
         if (txBuffer[1] !== rxBuffer[1]) {
           throw new Error('Sequence flag mismatch')
         }
 
-        // Increment counter if encrypted command is received
         if (this.keys.encryptKey && rxBuffer[3] === 0x7e) {
           this.eCount += 1
         }
 
-        // Return parsed packet data
         return this.parsePacketData(DATA, command)
       } catch (error) {
         debugData.rx.createdAt = Date.now()
-        // Retry sending the same command
-        // After 20 retries, host assumes that the slave has crashed.
         if (this.commandSendAttempts == this.config.commandRetries) {
           throw {
             success: false,
@@ -308,18 +327,19 @@ class SSP extends EventEmitter {
           }
         }
       } finally {
-        // Unset processing state and clear command fail timeout
         clearTimeout(commandTimeout)
         this.state.processing = false
         this.emit('DEBUG', debugData)
       }
     }
+
+    // Should not be reachable, but satisfies the return type
+    throw { success: false, error: 'Command failed', reason: new Error('Retry loop exhausted') }
   }
 
-  async poll(status = null) {
-    // Wait until processing is finished
+  async poll(status: boolean | null = null): Promise<ParsedResult | void> {
     if (this.state.processing)
-      await new Promise(resolve => {
+      await new Promise<void>(resolve => {
         const interval = setInterval(() => {
           if (!this.state.processing) {
             clearInterval(interval)
@@ -328,32 +348,25 @@ class SSP extends EventEmitter {
         }, 1)
       })
 
-    // If status is true and polling is already in progress, exit early
     if (status === true && this.state.polling === true) return
 
-    // Start polling if status is true
     if (status === true) {
       this.state.polling = true
-    }
-    // Stop polling if status is false
-    else if (status === false) {
+    } else if (status === false) {
       this.state.polling = false
-      clearTimeout(this.pollTimeout)
+      if (this.pollTimeout) clearTimeout(this.pollTimeout)
     }
 
-    // Poll only if polling is enabled
     if (this.state.polling) {
       try {
         const startTime = Date.now()
         const result = await this.command('POLL')
 
-        // Emit events if result contains info
         if (result.info) {
           const infos = Array.isArray(result.info) ? result.info : [result.info]
-          infos.forEach(info => this.emit(info.name, info))
+          ;(infos as Record<string, unknown>[]).forEach(info => this.emit(info.name as string, info))
         }
 
-        // Calculate execution time and schedule next poll
         const endTime = Date.now()
         const executionTime = endTime - startTime
         this.pollTimeout = setTimeout(
@@ -369,7 +382,6 @@ class SSP extends EventEmitter {
 
         return result
       } catch (error) {
-        // Stop polling in case of error
         this.state.polling = false
         throw error
       }
@@ -377,4 +389,4 @@ class SSP extends EventEmitter {
   }
 }
 
-module.exports = SSP
+export = SSP

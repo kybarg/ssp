@@ -1,19 +1,25 @@
-const { Transform } = require('node:stream')
+import { Transform, TransformOptions } from 'node:stream'
 
 const SSP_STX = 0x7f
 
-class SSPParser extends Transform {
-  constructor(options = {}) {
+export class SSPParser extends Transform {
+  private counter: number
+  private checkStuff: number
+  private packetLength: number
+  declare buffer: Buffer
+
+  constructor(options: TransformOptions = {}) {
     super(options)
 
     this.counter = 0
     this.checkStuff = 0
     this.packetLength = 0
+    this.buffer = Buffer.alloc(0)
   }
 
   // this is converted from C++ SDK with edits:
   // discards falty data
-  _transform(chunk, encoding, cb) {
+  _transform(chunk: Buffer, _encoding: string, cb: () => void): void {
     for (let ndx = 0; ndx < chunk.length; ndx++) {
       const byte = chunk[ndx]
 
@@ -60,18 +66,16 @@ class SSPParser extends Transform {
     cb()
   }
 
-  reset() {
+  reset(): void {
     this.counter = 0
     this.checkStuff = 0
     this.packetLength = 0
     this.buffer = Buffer.alloc(0)
   }
 
-  _flush(cb) {
+  _flush(cb: () => void): void {
     this.push(this.buffer)
     this.reset()
     cb()
   }
 }
-
-module.exports = { SSPParser }

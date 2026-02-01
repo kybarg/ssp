@@ -1,35 +1,40 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import globals from "globals";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import js from "@eslint/js";
-import { FlatCompat } from "@eslint/eslintrc";
+import js from '@eslint/js'
+import globals from 'globals'
+import tseslint from 'typescript-eslint'
+import eslintPluginJest from 'eslint-plugin-jest'
+import prettier from 'eslint-config-prettier'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const compat = new FlatCompat({
-    baseDirectory: __dirname,
-    recommendedConfig: js.configs.recommended,
-    allConfig: js.configs.all
-});
-
-export default defineConfig([globalIgnores(["**/node_modules"]), {
-    extends: compat.extends("eslint:recommended", "plugin:jest/recommended", "prettier"),
-
+export default [
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  prettier,
+  {
     languageOptions: {
-        globals: {
-            ...globals.node,
-        },
-
-        ecmaVersion: 12,
-        sourceType: "module",
+      globals: {
+        ...globals.node,
+      },
+      ecmaVersion: 2020,
+      sourceType: 'module',
+      parserOptions: {
+        project: './tsconfig.test.json',
+      },
     },
-}, {
-    files: ["tests/**/*"],
-
+  },
+  {
+    files: ['**/*.test.ts'],
+    plugins: {
+      jest: eslintPluginJest,
+    },
     languageOptions: {
-        globals: {
-            ...globals.jest,
-        },
+      globals: {
+        ...globals.jest,
+      },
     },
-}]);
+    rules: {
+      ...eslintPluginJest.configs.recommended.rules,
+    },
+  },
+  {
+    ignores: ['node_modules', 'dist'],
+  },
+]

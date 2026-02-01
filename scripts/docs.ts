@@ -1,27 +1,40 @@
-const fs = require('node:fs')
-const commands = require('../lib/static/commands.json')
-const statuses = require('../lib/static/status_desc.json')
+import fs from 'node:fs'
+import commands from '../lib/static/commands.json'
+import statuses from '../lib/static/status_desc.json'
+
+interface CommandEntry {
+  code: number
+  encrypted?: boolean
+  args?: Record<string, string> | false
+  device?: string[]
+  description?: string
+  example?: string
+}
+
+interface StatusEntry {
+  name: string
+  description?: string
+  devices?: string[]
+  data?: Record<string, Record<string, string>>
+}
+
 let filePath = 'docs/commands.md'
 
-// Function to make a file empty
-function makeFileEmpty() {
+function makeFileEmpty(): void {
   fs.writeFileSync(filePath, '')
 }
 
-// Function to add a line to a file
-function addLineToFile(lineToAdd) {
+function addLineToFile(lineToAdd: string): void {
   fs.appendFileSync(filePath, lineToAdd + '\n', 'utf8')
 }
 
-function decimalToHex(decimal) {
+function decimalToHex(decimal: number): string {
   return '0x' + ('0' + decimal.toString(16)).slice(-2)
 }
 
-function convertToTitleCase(str) {
-  // Replace underscores with spaces
+function convertToTitleCase(str: string): string {
   str = str.replace(/_/g, ' ')
 
-  // Convert string to title case
   return str
     .toLowerCase()
     .split(' ')
@@ -31,14 +44,13 @@ function convertToTitleCase(str) {
     .join(' ')
 }
 
-// Make the file empty
 makeFileEmpty()
 
 addLineToFile('<a name="readme-top"></a>')
 addLineToFile('[Back to Documentation](readme.md)')
 addLineToFile('# Commands')
 
-const sortedCommands = Object.entries(commands).sort(([, a], [, b]) => a.code - b.code)
+const sortedCommands = Object.entries(commands as Record<string, CommandEntry>).sort(([, a], [, b]) => a.code - b.code)
 
 sortedCommands.forEach(([name], index) => {
   addLineToFile(`${index + 1}. [${convertToTitleCase(name)}](#${name})`)
@@ -47,7 +59,6 @@ sortedCommands.forEach(([name], index) => {
 sortedCommands.forEach(([name, rest]) => {
   const { code, encrypted, args, device, description, example } = rest
 
-  // Add a line to the file
   addLineToFile(`## ${name}`)
   addLineToFile(`| Code dec | Code hex |`)
   addLineToFile(`| --- | --- |`)
@@ -99,14 +110,13 @@ sortedCommands.forEach(([name, rest]) => {
 
 filePath = 'docs/events.md'
 
-// Make the file empty
 makeFileEmpty()
 
 addLineToFile('<a name="readme-top"></a>')
 addLineToFile('[Back to Documentation](readme.md)')
 addLineToFile('# Events')
 
-const sortedStatuses = Object.entries(statuses).sort(([a], [b]) => a - b)
+const sortedStatuses = Object.entries(statuses as Record<string, StatusEntry>).sort(([a], [b]) => Number(a) - Number(b))
 
 sortedStatuses.forEach(([, { name }], index) => {
   addLineToFile(`${index + 1}. [${convertToTitleCase(name)}](#${name})`)
@@ -117,11 +127,10 @@ addLineToFile('')
 sortedStatuses.forEach(([code, rest]) => {
   const { name, description, devices, data } = rest
 
-  // Add a line to the file
   addLineToFile(`## ${name}`)
   addLineToFile(`| Code dec | Code hex |`)
   addLineToFile(`| --- | --- |`)
-  addLineToFile(`| ${code} | ${decimalToHex(code)} |`)
+  addLineToFile(`| ${code} | ${decimalToHex(Number(code))} |`)
   addLineToFile('')
 
   if (devices) {

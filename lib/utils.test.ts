@@ -1,6 +1,5 @@
-const crypto = require('node:crypto')
-const semver = require('semver')
-const {
+import crypto from 'node:crypto'
+import {
   absBigInt,
   argsToByte,
   CRC16,
@@ -17,8 +16,9 @@ const {
   uInt32LE,
   uInt64LE,
   validateNodeVersion,
-} = require('./utils')
-const { engines } = require('../package.json')
+} from './utils'
+import { engines } from '../package.json'
+import chalk from 'chalk'
 
 // Mocking the chalk module
 jest.mock('chalk', () => ({
@@ -51,25 +51,25 @@ describe('encrypt', () => {
 
   test('should throw an error if key is not provided', () => {
     expect(() => {
-      encrypt(null, data)
+      encrypt(null as any, data)
     }).toThrow('Key must be a Buffer')
   })
 
   test('should throw an error if key is not a Buffer', () => {
     expect(() => {
-      encrypt('not a buffer', data)
+      encrypt('not a buffer' as any, data)
     }).toThrow('Key must be a Buffer')
   })
 
   test('should throw an error if data is not provided', () => {
     expect(() => {
-      encrypt(key, null)
+      encrypt(key, null as any)
     }).toThrow('Data must be a Buffer')
   })
 
   test('should throw an error if data is not a Buffer', () => {
     expect(() => {
-      encrypt(key, 'not a buffer')
+      encrypt(key, 'not a buffer' as any)
     }).toThrow('Data must be a Buffer')
   })
 })
@@ -91,25 +91,25 @@ describe('decrypt', () => {
 
   test('should throw an error if key is not provided', () => {
     expect(() => {
-      decrypt(null, encryptedData)
+      decrypt(null as any, encryptedData)
     }).toThrow('Key must be a Buffer')
   })
 
   test('should throw an error if key is not a Buffer', () => {
     expect(() => {
-      decrypt('not a buffer', encryptedData)
+      decrypt('not a buffer' as any, encryptedData)
     }).toThrow('Key must be a Buffer')
   })
 
   test('should throw an error if data is not provided', () => {
     expect(() => {
-      decrypt(key, null)
+      decrypt(key, null as any)
     }).toThrow('Data must be a Buffer')
   })
 
   test('should throw an error if data is not a Buffer', () => {
     expect(() => {
-      decrypt(key, 'not a buffer')
+      decrypt(key, 'not a buffer' as any)
     }).toThrow('Data must be a Buffer')
   })
 })
@@ -123,7 +123,7 @@ describe('readBytesFromBuffer', () => {
 
   test('should throw an error if input is not a Buffer', () => {
     expect(() => {
-      readBytesFromBuffer('not a buffer', 0, 3)
+      readBytesFromBuffer('not a buffer' as any, 0, 3)
     }).toThrow('Input must be a Buffer object')
   })
 
@@ -222,7 +222,7 @@ describe('uInt64LE', () => {
     }).toThrow('Input must be an unsigned 64-bit integer')
 
     expect(() => {
-      uInt64LE('not a number')
+      uInt64LE('not a number' as any)
     }).toThrow('Input must be an unsigned 64-bit integer')
   })
 })
@@ -247,7 +247,7 @@ describe('uInt32LE', () => {
     }).toThrow('Input must be an unsigned 32-bit integer')
 
     expect(() => {
-      uInt32LE('not a number')
+      uInt32LE('not a number' as any)
     }).toThrow('Input must be an unsigned 32-bit integer')
   })
 })
@@ -272,7 +272,7 @@ describe('uInt16LE', () => {
     }).toThrow('Input must be an unsigned 16-bit integer')
 
     expect(() => {
-      uInt16LE('not a number')
+      uInt16LE('not a number' as any)
     }).toThrow('Input must be an unsigned 16-bit integer')
   })
 })
@@ -334,17 +334,17 @@ describe('argsToByte function', () => {
   })
 
   test('GET_DENOMINATION_ROUTE: protocol < 6', () => {
-    const result = argsToByte('GET_DENOMINATION_ROUTE', { value: 500 }, 5)
+    const result = argsToByte('GET_DENOMINATION_ROUTE', { value: 500 } as any, 5)
     expect(result).toEqual(Buffer.from([0xf4, 0x01, 0x00, 0x00]))
   })
 
   test('GET_DENOMINATION_ROUTE: hopper, protocol < 6', () => {
-    const result = argsToByte('GET_DENOMINATION_ROUTE', { value: 500, isHopper: true }, 5)
+    const result = argsToByte('GET_DENOMINATION_ROUTE', { value: 500, isHopper: true } as any, 5)
     expect(result).toEqual(Buffer.from([0xf4, 0x01]))
   })
 
   test('GET_DENOMINATION_ROUTE: protocol >= 6', () => {
-    const result = argsToByte('GET_DENOMINATION_ROUTE', { value: 500, country_code: 'EUR' }, 6)
+    const result = argsToByte('GET_DENOMINATION_ROUTE', { value: 500, country_code: 'EUR' } as any, 6)
     expect(result).toEqual(Buffer.from([0xf4, 0x01, 0x00, 0x00, 0x45, 0x55, 0x52]))
   })
 
@@ -592,7 +592,7 @@ describe('argsToByte function', () => {
   })
 
   test('empty if unknown command', () => {
-    const result = argsToByte('RANDOM_COMMAND_TEST', { param: true }, 6)
+    const result = argsToByte('RANDOM_COMMAND_TEST', { param: true } as any, 6)
     expect(result).toEqual(Buffer.alloc(0))
   })
 
@@ -628,7 +628,7 @@ describe('argsToByte function', () => {
 })
 
 describe('validateNodeVersion', () => {
-  let originalEnginesNode
+  let originalEnginesNode: string
 
   beforeEach(() => {
     originalEnginesNode = engines.node
@@ -641,29 +641,17 @@ describe('validateNodeVersion', () => {
   test('should not throw error when Node.js version satisfies the required version', () => {
     engines.node = process.version.replace('v', '>=')
 
-    // Mocking the semver.satisfies function
-    const mockSatisfies = jest.spyOn(semver, 'satisfies').mockReturnValue(true)
-
     expect(() => {
       validateNodeVersion()
     }).not.toThrow()
-
-    // Restore the original function
-    mockSatisfies.mockRestore()
   })
 
   test('should throw error when Node.js version does not satisfy the required version', () => {
     engines.node = process.version.replace('v', '<')
 
-    // Mocking the semver.satisfies function
-    const mockSatisfies = jest.spyOn(semver, 'satisfies').mockReturnValue(false)
-
     expect(() => {
       validateNodeVersion()
     }).toThrow()
-
-    // Restore the original function
-    mockSatisfies.mockRestore()
   })
 })
 
@@ -682,7 +670,7 @@ describe('extractPacketData', () => {
     const result = extractPacketData(buffer, null, count)
 
     expect(result).toEqual(expectedData)
-    expect(require('chalk').red).not.toHaveBeenCalled()
+    expect(chalk.red).not.toHaveBeenCalled()
   })
 
   test('extracts and decrypts data from an encrypted packet buffer', () => {
@@ -691,10 +679,10 @@ describe('extractPacketData', () => {
     ])
     const expectedData = Buffer.from([0xf0, 0x00, 0x4a, 0x78, 0xb4])
 
-    const result = extractPacketData(buffer, encryptKey, count, true)
+    const result = extractPacketData(buffer, encryptKey, count)
 
     expect(result).toEqual(expectedData)
-    expect(require('chalk').red).toHaveBeenCalled()
+    expect(chalk.red).toHaveBeenCalled()
   })
 
   test('throws error for unknown response', () => {
@@ -722,11 +710,11 @@ describe('extractPacketData', () => {
 })
 
 describe('generateKeys function', () => {
-  let originalGeneratePrimeSync
-  let originalRandomBytes
+  let originalGeneratePrimeSync: typeof crypto.generatePrimeSync
+  let originalRandomBytes: typeof crypto.randomBytes
 
   beforeEach(() => {
-    originalGeneratePrimeSync = crypto.generatePrime
+    originalGeneratePrimeSync = crypto.generatePrimeSync
     originalRandomBytes = crypto.randomBytes
   })
 
@@ -778,16 +766,13 @@ describe('generateKeys function', () => {
 
 // Your updated test suite
 describe('getPacket', () => {
-  // let originalGeneratePrimeSync
-  let originalRandomBytes
+  let originalRandomBytes: typeof crypto.randomBytes
 
   beforeEach(() => {
-    // originalGeneratePrimeSync = crypto.generatePrime
     originalRandomBytes = crypto.randomBytes
   })
 
   afterEach(() => {
-    // crypto.generatePrimeSync = originalGeneratePrimeSync
     crypto.randomBytes = originalRandomBytes
   })
 

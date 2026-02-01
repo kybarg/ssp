@@ -1,8 +1,8 @@
-const { SSPParser } = require('./index')
+import { SSPParser } from './index'
 
 describe('SSPParser', () => {
-  let parser
-  let spy
+  let parser: SSPParser
+  let spy: jest.Mock
 
   beforeEach(() => {
     parser = new SSPParser()
