@@ -1,4 +1,4 @@
-import { parseData } from './utils'
+import { parseData } from '.'
 
 describe('parseData', () => {
   describe('GENERIC responses', () => {
