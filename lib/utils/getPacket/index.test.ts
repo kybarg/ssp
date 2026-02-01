@@ -1,6 +1,6 @@
 import crypto from 'node:crypto'
 import { getPacket } from '.'
-import { argsToByte } from '../argsToByte/argsToByte'
+import { argsToByte } from '../argsToByte'
 
 describe('getPacket', () => {
   let originalRandomBytes: typeof crypto.randomBytes

@@ -1,5 +1,5 @@
 import { encrypt } from '.'
-import { uInt64LE } from '../uInt64LE/uInt64LE'
+import { uInt64LE } from '../uInt64LE'
 
 describe('encrypt', () => {
   const key = Buffer.concat([Buffer.from('0123456701234567', 'hex').swap64(), uInt64LE(23150n)])
