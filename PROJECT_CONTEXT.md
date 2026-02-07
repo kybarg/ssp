@@ -40,8 +40,39 @@ D:\Projects\ssp\
 │   │   ├── generateKeys.test.js
 │   │   ├── getPacket.js      # Construct SSP packets
 │   │   ├── getPacket.test.js
-│   │   ├── parseData.js      # Parse device responses
-│   │   ├── parseData.test.js
+│   │   ├── parseData/         # Parse device responses (modular)
+│   │   │   ├── index.js      # Entry point — dispatcher
+│   │   │   ├── index.test.js # parseData tests
+│   │   │   └── commands/     # Individual command parsers
+│   │   │       ├── 5_SETUP_REQUEST.js
+│   │   │       ├── 7_POLL.js
+│   │   │       ├── 12_GET_SERIAL_NUMBER.js
+│   │   │       ├── 13_UNIT_DATA.js
+│   │   │       ├── 14_CHANNEL_VALUE_REQUEST.js
+│   │   │       ├── 15_CHANNEL_SECURITY_DATA.js
+│   │   │       ├── 16_CHANNEL_RE_TEACH_DATA.js
+│   │   │       ├── 23_LAST_REJECT_CODE.js
+│   │   │       ├── 32_GET_FIRMWARE_VERSION.js
+│   │   │       ├── 34_GET_ALL_LEVELS.js
+│   │   │       ├── 35_GET_BAR_CODE_READER_CONFIGURATION.js
+│   │   │       ├── 37_GET_BAR_CODE_INHIBIT_STATUS.js
+│   │   │       ├── 39_GET_BAR_CODE_DATA.js
+│   │   │       ├── 48_SET_REFILL_MODE.js
+│   │   │       ├── 51_PAYOUT_AMOUNT.error.js
+│   │   │       ├── 53_GET_DENOMINATION_LEVEL.js
+│   │   │       ├── 60_GET_DENOMINATION_ROUTE.js
+│   │   │       ├── 62_GET_MINIMUM_PAYOUT.js
+│   │   │       ├── 65_GET_NOTE_POSITIONS.js
+│   │   │       ├── 65_GET_NOTE_POSITIONS.error.js
+│   │   │       ├── 67_STACK_NOTE.error.js
+│   │   │       ├── 68_FLOAT_BY_DENOMINATION.error.js
+│   │   │       ├── 69_SET_VALUE_REPORTING_TYPE.error.js
+│   │   │       ├── 76_REQUEST_KEY_EXCHANGE.js
+│   │   │       ├── 79_GET_BUILD_REVISION.js
+│   │   │       ├── 81_GET_HOPPER_OPTIONS.js
+│   │   │       ├── 83_CASHBOX_PAYOUT_OPERATION_DATA.js
+│   │   │       ├── 88_GET_COUNTERS.js
+│   │   │       └── 92_ENABLE_PAYOUT_DEVICE.error.js
 │   │   ├── randomInt.js      # Random integer generation
 │   │   ├── randomInt.test.js
 │   │   ├── readBytesFromBuffer.js
@@ -183,7 +214,11 @@ unit_type: null              // Device type (set after SETUP_REQUEST/UNIT_DATA)
 
 **Packet Parsing** (`src/utils/`):
 - `extractPacketData.js` - Extract and decrypt packet data
-- `parseData.js` - Parse response data from device
+- `parseData/` - Parse response data from device (modular dispatcher)
+  - `parseData/index.js` - Entry point: builds result object, dispatches to command handlers
+  - `parseData/commands/{code}_{NAME}.js` - Success response parsers (named by decimal command code)
+  - `parseData/commands/{code}_{NAME}.error.js` - Error response parsers (COMMAND_CANNOT_BE_PROCESSED)
+  - Shared handlers: `GET_FIRMWARE_VERSION`/`GET_DATASET_VERSION`, `POLL`/`POLL_WITH_ACK`, `PAYOUT_AMOUNT`/`PAYOUT_BY_DENOMINATION`/`FLOAT_AMOUNT`, `STACK_NOTE`/`PAYOUT_NOTE`, etc.
 
 **Miscellaneous** (`src/utils/`):
 - `randomInt.js` - Random integer generation
@@ -315,9 +350,9 @@ ENCRYPTED_DATA = AES-128-ECB(
 ## Testing
 
 **Test Files:**
-- `src/utils.test.js` - Utils functions
-- `src/utils.parseData.test.js` - Data parsing
-- `src/parser/index.test.js` - Serial parser
+- `src/utils/*.test.js` - Individual utility function tests
+- `src/utils/parseData/index.test.js` - Data parsing tests
+- `src/parser/index.test.js` - Serial parser tests
 
 **Test Command:** `npm test` (Jest with coverage)
 
@@ -403,11 +438,13 @@ await eSSP.command('PAYOUT_AMOUNT', {
 **Adding new command:** 
 1. Edit `src/static/commands.json`
 2. Add case to `src/utils/argsToByte.js` (if command has arguments)
-3. Add parsing case to `src/utils/parseData.js` POLL or specific command section
+3. Create `src/utils/parseData/commands/{code}_{NAME}.js` with a parser function (if command returns data)
+4. Register the handler in `src/utils/parseData/index.js` `successHandlers` map
+5. For error responses, create `{code}_{NAME}.error.js` and register in `errorHandlers` map
 
 **Adding new event:** 
 1. Edit `src/static/status_desc.json`
-2. Add parsing case to `src/utils/parseData.js` POLL section
+2. Add case to `src/utils/parseData/commands/7_POLL.js` switch statement
 
 **Modifying encryption:**
 - `src/utils/encrypt.js` - Encryption logic
