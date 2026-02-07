@@ -259,17 +259,12 @@ class SSP extends EventEmitter {
         },
       }
 
-      // Define command timeout
-      const commandTimeout = setTimeout(() => {
-        this.eventEmitter.emit('error', new Error('TIMEOUT'))
-      }, this.config.timeout)
-
       try {
         // Send command to device
         this.port.write(txBuffer)
 
         // Await data from device
-        const [rxBuffer] = await once(this.eventEmitter, 'DATA')
+        const [rxBuffer] = await once(this.eventEmitter, 'DATA', { signal: AbortSignal.timeout(this.config.timeout) })
         debugData.rx.createdAt = Date.now()
         debugData.rx.encrypted = rxBuffer
 
@@ -302,8 +297,7 @@ class SSP extends EventEmitter {
           throw err
         }
       } finally {
-        // Unset processing state and clear command fail timeout
-        clearTimeout(commandTimeout)
+        // Unset processing state
         this.state.processing = false
         this.emit('DEBUG', debugData)
       }
