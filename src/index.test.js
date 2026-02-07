@@ -640,7 +640,7 @@ describe('SSP', () => {
       await expect(ssp.sendToDevice('SYNC', txBuffer, txBufferPlain)).rejects.toEqual(
         expect.objectContaining({
           success: false,
-          error: expect.stringContaining('2 retries'),
+          message: expect.stringContaining('2 retries'),
         }),
       )
     })

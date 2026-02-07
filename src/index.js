@@ -296,11 +296,10 @@ class SSP extends EventEmitter {
         // Retry sending the same command
         // After 20 retries, host assumes that the slave has crashed.
         if (i + 1 === this.config.commandRetries) {
-          throw {
-            success: false,
-            error: `Command failed after ${this.config.commandRetries} retries`,
-            reason: error,
-          }
+          const err = new Error(`Command failed after ${this.config.commandRetries} retries`)
+          err.success = false
+          err.reason = error
+          throw err
         }
       } finally {
         // Unset processing state and clear command fail timeout
