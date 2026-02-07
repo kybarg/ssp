@@ -21,9 +21,9 @@
   "bugs": {
     "url": "https://github.com/kybarg/ssp/issues"
   },
-  "main": "lib/index.js",
+  "main": "src/index.js",
   "scripts": {
-    "lint": "eslint lib example.js",
+    "lint": "eslint src example.js",
     "prettier": "npx prettier --write \"**/*.{ts,tsx,js,md,mdx,css,yaml}\"",
     "test": "jest --coverage",
     "test:watch": "jest --watch",

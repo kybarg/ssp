@@ -1,6 +1,6 @@
 const fs = require('node:fs')
-const commands = require('../lib/static/commands.json')
-const statuses = require('../lib/static/status_desc.json')
+const commands = require('../src/static/commands.json')
+const statuses = require('../src/static/status_desc.json')
 let filePath = 'docs/commands.md'
 
 // Function to make a file empty

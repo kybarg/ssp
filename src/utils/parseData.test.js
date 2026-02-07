@@ -1,4 +1,4 @@
-const { parseData } = require('./utils')
+const parseData = require('./parseData')
 
 describe('parseData', () => {
   describe('GENERIC responses', () => {

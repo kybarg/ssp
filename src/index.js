@@ -12,7 +12,7 @@ const {
   parseData,
   createSSPHostEncryptionKey,
   validateNodeVersion,
-} = require('./utils.js')
+} = require('./utils')
 const commandList = require('./static/commands.json')
 const { SSPParser } = require('./parser/index.js')
 
