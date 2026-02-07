@@ -63,7 +63,6 @@ class SSP extends EventEmitter {
     }
 
     this.eCount = 0
-    this.commandSendAttempts = 0
     this.sequence = 0x80
 
     this.protocol_version = null
@@ -221,8 +220,6 @@ class SSP extends EventEmitter {
       this.sequence = 0x80
     }
 
-    this.commandSendAttempts = 0
-
     const isEncrypted = this.keys.encryptKey !== null && (commandList[command].encrypted || this.config.encryptAllCommand)
     const argBytes = argsToByte(command, args, this.protocol_version)
     const sequence = this.getSequence()
@@ -270,11 +267,9 @@ class SSP extends EventEmitter {
       try {
         // Send command to device
         this.port.write(txBuffer)
-        this.commandSendAttempts += 1
 
         // Await data from device
         const [rxBuffer] = await once(this.eventEmitter, 'DATA')
-        clearTimeout(commandTimeout)
         debugData.rx.createdAt = Date.now()
         debugData.rx.encrypted = rxBuffer
 
@@ -300,10 +295,10 @@ class SSP extends EventEmitter {
         debugData.rx.createdAt = Date.now()
         // Retry sending the same command
         // After 20 retries, host assumes that the slave has crashed.
-        if (this.commandSendAttempts == this.config.commandRetries) {
+        if (i + 1 === this.config.commandRetries) {
           throw {
             success: false,
-            error: `Command failed afte ${this.config.commandRetries} retries`,
+            error: `Command failed after ${this.config.commandRetries} retries`,
             reason: error,
           }
         }

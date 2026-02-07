@@ -20,6 +20,7 @@ NV9USB, NV10USB, BV20, BV50, BV100, NV200, NV200 Spectral, SMART Hopper, SMART P
 D:\Projects\ssp\
 ├── src/
 │   ├── index.js              # Main SSP class (EventEmitter-based)
+│   ├── index.test.js
 │   ├── utils/                # Utility functions (modular structure)
 │   │   ├── index.js          # Main exports (re-exports all utils)
 │   │   ├── absBigInt.js      # Absolute value of BigInt

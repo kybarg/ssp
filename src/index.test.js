@@ -130,7 +130,6 @@ describe('SSP', () => {
 
     test('should initialize counters and sequence', () => {
       expect(ssp.eCount).toBe(0)
-      expect(ssp.commandSendAttempts).toBe(0)
       expect(ssp.sequence).toBe(0x80)
     })
 
@@ -488,13 +487,6 @@ describe('SSP', () => {
       expect(ssp.sequence).toBe(0x00)
     })
 
-    test('should reset commandSendAttempts to 0', async () => {
-      ssp.commandSendAttempts = 5
-      ssp.sendToDevice = jest.fn().mockResolvedValue({ success: true, status: 'OK' })
-      await ssp.command('SYNC')
-      expect(ssp.commandSendAttempts).toBe(0)
-    })
-
     test('should toggle sequence after response', async () => {
       ssp.sequence = 0x80
       ssp.sendToDevice = jest.fn().mockResolvedValue({ success: true, status: 'OK' })
@@ -596,22 +588,8 @@ describe('SSP', () => {
       )
     })
 
-    test('should increment commandSendAttempts', async () => {
-      const rxBuffer = Buffer.from([0x7f, 0x80, 0x01, 0xf0, 0x00, 0x00])
-
-      const promise = ssp.sendToDevice('SYNC', txBuffer, txBufferPlain)
-
-      process.nextTick(() => {
-        ssp.eventEmitter.emit('DATA', rxBuffer)
-      })
-
-      await promise
-      expect(ssp.commandSendAttempts).toBe(1)
-    })
-
     test('should throw on sequence flag mismatch', async () => {
       ssp.config.commandRetries = 1
-      ssp.commandSendAttempts = 0
       const rxBuffer = Buffer.from([0x7f, 0x00, 0x01, 0xf0, 0x00, 0x00]) // Different sequence
 
       const promise = ssp.sendToDevice('SYNC', txBuffer, txBufferPlain)
